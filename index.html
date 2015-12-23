@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Haiku Scroller</title>
+    <script src="//cdn.jsdelivr.net/phaser/2.2.2/phaser.min.js"></script>
+  <div id="game"></div>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+
+function preload() {
+
+	game.load.image('background', 'assets/background.png');
+	game.load.image('platform', 'assets/platform.png');
+	game.load.image('ice-platform', 'assets/ice-platform.png');
+	game.load.image('cloud-platform', 'assets/cloud-platform.png');
+	game.load.image('spikes', 'assets/spikes.png');
+	game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+}
+
+var platforms;
+var player;
+var cursors;
+var spikes;
+
+function create() {
+	//load Arcade Physics
+	game.physics.startSystem(Phaser.Physics.ARCADE);
+
+	//Add background
+	game.add.sprite(0,0, 'background');
+	// game.background.fixedToCamera = true;
+
+	//Setting up the platforms group
+	platforms = game.add.group();
+	platforms.enableBody = true;
+
+	//Stationary platforms
+	//Cloud ground
+	var ground = platforms.create(0, game.world.height -25, 'cloud-platform');
+	ground.body.immovable = true;
+
+	var ground2 = platforms.create(280, game.world.height -25, 'cloud-platform');
+	ground.body.immovable = true;
+
+	var ground3 = platforms.create(400, game.world.height -25, 'cloud-platform');
+	ground.body.immovable = true;
+
+	var ground4 = platforms.create(520, game.world.height -25, 'cloud-platform');
+	ground.body.immovable = true;
+
+
+	//Floating earth platforms
+	var ledge = platforms.create(100, 500, 'platform');
+	ledge.body.immovable = true;
+
+	var ledge2 = platforms.create(550, 100, 'platform');
+	ledge.body.immovable = true;
+
+	//Moving Platforms
+	
+
+	//Spikes
+	spikes = game.add.group();
+	spikes.enableBody = true;
+	var spike = spikes.create(200, game.world.height -55, 'spikes');
+	spike.body.immovable = true;
+
+	var spike2 = spikes.create(650, game.world.height -55, 'spikes');
+	spike.body.immovable = true;
+
+	var spike3 = spikes.create(720, game.world.height -55, 'spikes');
+	spike.body.immovable = true;
+
+	//player
+	player = game.add.sprite(32, game.world.height - 150, 'dude');
+	game.physics.arcade.enable(player);
+
+	player.body.gravity.y = 300;
+	player.body.collideWorldBounds = true;
+
+	player.animations.add('left', [0,1,2,3], 10, true);
+	player.animations.add('right', [5,6,7,8], 10, true);
+
+	//Keyboard controls
+	cursors = game.input.keyboard.createCursorKeys();
+}
+
+function update() {
+	//Collison for the player with platforms
+	game.physics.arcade.collide(player, platforms);
+
+	//Checks to see if player touches the spikes, if so calls killPlayer function
+	game.physics.arcade.collide(player, spikes, killPlayer);
+
+	//Reset player velocity
+	player.body.velocity.x = 0;
+
+	//give movement to player
+	if (cursors.left.isDown) {
+		//left
+		player.body.velocity.x = -150;
+		player.animations.play('left');
+	} else if (cursors.right.isDown) {
+			//right
+			player.body.velocity.x = 150;
+			player.animations.play('right');
+	} else {
+			//standing still
+			player.animations.stop();
+			player.frame = 4;
+	}
+
+	//jump
+	if (cursors.up.isDown && player.body.touching.down) {
+		player.body.velocity.y = -250;
+	}
+
+}
+
+function killPlayer(player) {
+	player.kill();
+}
+
+</script>
+
+</body>
+</html>
