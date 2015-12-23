@@ -123,11 +123,9 @@ PhaserHaikuGame.prototype = {
 		//Scrolls
 		this.scrolls = this.add.physicsGroup();
 
-		var scroll1 = this.add.sprite(600, 80, 'scroll1', this.scrolls);
-
-		this.scrolls.setAll('enableBody', true);
-		this.scrolls.setAll('body.allowGravity', true);
-
+		var scroll1 = this.scrolls.create(600, 80, 'scroll1');
+		var scroll2 = this.scrolls.create(150, 470, 'scroll2');
+		var scroll3 = this.scrolls.create(530, 500, 'scroll3');
 		//Keyboard controls
 		this.cursors = game.input.keyboard.createCursorKeys();
 
@@ -210,6 +208,10 @@ PhaserHaikuGame.prototype = {
 		//Collison for the player with platforms
 		this.physics.arcade.collide(this.player, this.platforms);
 		this.physics.arcade.collide(this.player, this.icePlatforms, this.customSep, null, this);
+		this.physics.arcade.collide(this.scrolls, this.platforms);
+
+		//Checks to see if player overlaps with a scroll, if so calls the kill function on it
+		this.physics.arcade.overlap(this.player, this.scrolls, this.collectScrolls, null, this);
 
 		//Checks to see if player touches the spikes, if so calls killPlayer function
 	  this.physics.arcade.collide(this.player, this.spikes, this.killPlayer);
@@ -251,6 +253,10 @@ PhaserHaikuGame.prototype = {
 
 	killPlayer: function(player) {
 		player.kill();
+	},
+
+	collectScrolls: function (player, scroll) {
+		scroll.kill();
 	}
 
 };
