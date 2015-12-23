@@ -4,127 +4,312 @@
 	<meta charset="UTF-8" />
 	<title>Haiku Scroller</title>
     <script src="//cdn.jsdelivr.net/phaser/2.2.2/phaser.min.js"></script>
-  <div id="game"></div>
 </head>
 <body>
+	<div id="game"></div>
 
 <script type="text/javascript">
 
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game');
 
-function preload() {
+var PhaserHaikuGame = function() {
 
-	game.load.image('background', 'assets/background.png');
-	game.load.image('platform', 'assets/platform.png');
-	game.load.image('ice-platform', 'assets/ice-platform.png');
-	game.load.image('cloud-platform', 'assets/cloud-platform.png');
-	game.load.image('spikes', 'assets/spikes.png');
-	game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
-}
+	this.player = null;
 
-var platforms;
-var player;
-var cursors;
-var spikes;
+	this.platforms = null;
+	this.spikes = null;
+	this.icePlatforms = null;
 
-function create() {
-	//load Arcade Physics
-	game.physics.startSystem(Phaser.Physics.ARCADE);
+	this.edgeTimer = 0;
+	this.jumpTimer = 0;
 
-	//Add background
-	game.add.sprite(0,0, 'background');
-	// game.background.fixedToCamera = true;
-
-	//Setting up the platforms group
-	platforms = game.add.group();
-	platforms.enableBody = true;
-
-	//Stationary platforms
-	//Cloud ground
-	var ground = platforms.create(0, game.world.height -25, 'cloud-platform');
-	ground.body.immovable = true;
-
-	var ground2 = platforms.create(280, game.world.height -25, 'cloud-platform');
-	ground.body.immovable = true;
-
-	var ground3 = platforms.create(400, game.world.height -25, 'cloud-platform');
-	ground.body.immovable = true;
-
-	var ground4 = platforms.create(520, game.world.height -25, 'cloud-platform');
-	ground.body.immovable = true;
+	this.wasStanding = false;
+	this.cursors = null;
 
 
-	//Floating earth platforms
-	var ledge = platforms.create(100, 500, 'platform');
-	ledge.body.immovable = true;
+};
 
-	var ledge2 = platforms.create(550, 100, 'platform');
-	ledge.body.immovable = true;
+PhaserHaikuGame.prototype = {
 
-	//Moving Platforms
-	
+	init: function() {
+		//Initialize physics
+		this.physics.startSystem(Phaser.Physics.ARCADE);
 
-	//Spikes
-	spikes = game.add.group();
-	spikes.enableBody = true;
-	var spike = spikes.create(200, game.world.height -55, 'spikes');
-	spike.body.immovable = true;
+		this.physics.arcade.gravity.y = 300;
 
-	var spike2 = spikes.create(650, game.world.height -55, 'spikes');
-	spike.body.immovable = true;
+	},
 
-	var spike3 = spikes.create(720, game.world.height -55, 'spikes');
-	spike.body.immovable = true;
+	preload: function() {
 
-	//player
-	player = game.add.sprite(32, game.world.height - 150, 'dude');
-	game.physics.arcade.enable(player);
+		this.load.image('background', 'assets/background.png');
+		this.load.image('platform', 'assets/platform.png');
+		this.load.image('ice-platform', 'assets/ice-platform.png');
+		this.load.image('cloud-platform', 'assets/cloud-platform.png');
+		this.load.image('spikes', 'assets/spikes.png');
+		this.load.image('scroll1', 'assets/scroll1.png');
+		this.load.image('scroll2', 'assets/scroll2.png');
+		this.load.image('scroll3', 'assets/scroll3.png');
+		this.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+	},
 
-	player.body.gravity.y = 300;
-	player.body.collideWorldBounds = true;
+	create: function() {
 
-	player.animations.add('left', [0,1,2,3], 10, true);
-	player.animations.add('right', [5,6,7,8], 10, true);
 
-	//Keyboard controls
-	cursors = game.input.keyboard.createCursorKeys();
-}
+		//Add background
+		this.add.sprite(0,0, 'background');
+		// game.background.fixedToCamera = true;
 
-function update() {
-	//Collison for the player with platforms
-	game.physics.arcade.collide(player, platforms);
+		//Setting up the platforms group
+		this.platforms = this.add.physicsGroup();
 
-	//Checks to see if player touches the spikes, if so calls killPlayer function
-	game.physics.arcade.collide(player, spikes, killPlayer);
+		//Stationary platforms
+		//Cloud ground
+		var ground = this.platforms.create(0, game.world.height -25, 'cloud-platform');
+		var ground2 = this.platforms.create(280, game.world.height -25, 'cloud-platform');
+		var ground3 = this.platforms.create(400, game.world.height -25, 'cloud-platform');
+		var ground4 = this.platforms.create(520, game.world.height -25, 'cloud-platform');
 
-	//Reset player velocity
-	player.body.velocity.x = 0;
 
-	//give movement to player
-	if (cursors.left.isDown) {
-		//left
-		player.body.velocity.x = -150;
-		player.animations.play('left');
-	} else if (cursors.right.isDown) {
-			//right
-			player.body.velocity.x = 150;
-			player.animations.play('right');
-	} else {
-			//standing still
-			player.animations.stop();
-			player.frame = 4;
+		//Floating earth platforms
+		var ledge = this.platforms.create(100, 500, 'platform');
+		var ledge2 = this.platforms.create(550, 100, 'platform');
+
+		//Make them immovable
+		this.platforms.setAll('body.immovable', true);
+		this.platforms.setAll('body.allowGravity', false);
+
+
+		//Moving Platforms
+		icePlatforms = game.add.group();
+		this.icePlatforms = this.add.physicsGroup();
+
+		var icePlatform1 = new IcePlatform(this.game, 250, 450, 'ice-platform', this.icePlatforms);
+
+		icePlatform1.addMotionPath([
+			{ x: "+100", xSpeed: 2000, xEase: "Linear", y: "-100", ySpeed: 2000, yEase: "Sine.easeIn"},
+			{ x: "-100", xSpeed: 2000, xEase: "Linear", y: "-100", ySpeed: 2000, yEase: "Sine.easeOut"},
+			{ x: "-100", xSpeed: 2000, xEase: "Linear", y: "+100", ySpeed: 2000, yEase: "Sine.easeIn"},
+			{ x: "+100", xSpeed: 2000, xEase: "Linear", y: "+100", ySpeed: 2000, yEase: "Sine.easeOut"}
+		]);
+
+		var icePlatform2 = new IcePlatform(this.game, 450, 180, 'ice-platform', this.icePlatforms);
+
+		icePlatform2.addMotionPath([
+			{ x: "+100", xSpeed: 1000, xEase: "Linear", y: "+0", ySpeed: 2000, yEase: "Sine.easeIn"},
+			{ x: "-100", xSpeed: 1000, xEase: "Linear", y: "+0", ySpeed: 2000, yEase: "Sine.easeOut"}
+		]);
+
+		//Spikes
+		this.spikes = this.add.physicsGroup();
+
+		var spike = this.spikes.create(200, game.world.height -55, 'spikes');
+		var spike2 = this.spikes.create(650, game.world.height -55, 'spikes');
+		var spike3 = this.spikes.create(720, game.world.height -55, 'spikes');
+
+		//Make them immovable
+		this.spikes.setAll('body.immovable', true);
+		this.spikes.setAll('body.allowGravity', false);
+
+		//player
+		this.player = this.add.sprite(32, game.world.height - 150, 'dude');
+		this.physics.arcade.enable(this.player);
+
+		this.player.body.gravity.y = 300;
+		this.player.body.collideWorldBounds = true;
+
+		this.player.animations.add('left', [0,1,2,3], 10, true);
+		this.player.animations.add('right', [5,6,7,8], 10, true);
+
+		//Scrolls
+		this.scrolls = this.add.physicsGroup();
+
+		var scroll1 = this.add.sprite(600, 80, 'scroll1', this.scrolls);
+
+		this.scrolls.setAll('enableBody', true);
+		this.scrolls.setAll('body.allowGravity', true);
+
+		//Keyboard controls
+		this.cursors = game.input.keyboard.createCursorKeys();
+
+		this.icePlatforms.callAll('start');
+	},
+
+  //Taken from Phaser tutorial issue-004
+	customSep: function (player, platform) {
+
+			if (!this.locked && player.body.velocity.y > 0)
+			{
+					this.locked = true;
+					this.lockedTo = platform;
+					platform.playerLocked = true;
+
+					player.body.velocity.y = 0;
+			}
+
+	},
+
+	checkLock: function () {
+
+			this.player.body.velocity.y = 0;
+
+			//  break lock if move from platform horizontally from the platform
+			if (this.player.body.right < this.lockedTo.body.x || this.player.body.x > this.lockedTo.body.right)
+			{
+					this.cancelLock();
+			}
+
+	},
+
+	cancelLock: function () {
+
+			this.wasLocked = true;
+			this.locked = false;
+
+	},
+
+	preRender: function () {
+
+			if (this.locked || this.wasLocked)
+			{
+					this.player.x += this.lockedTo.deltaX;
+					this.player.y = this.lockedTo.y - 48;
+
+					if (this.player.body.velocity.x !== 0)
+					{
+							this.player.body.velocity.y = 0;
+					}
+			}
+
+			if (this.willJump)
+			{
+					this.willJump = false;
+
+					if (this.lockedTo && this.lockedTo.deltaY < 0 && this.wasLocked)
+					{
+							//  If the platform is moving up we add its velocity to the players jump
+							this.player.body.velocity.y = -350 + (this.lockedTo.deltaY * 10);
+					}
+					else
+					{
+							this.player.body.velocity.y = -350;
+					}
+
+					this.jumpTimer = this.time.time + 750;
+			}
+
+			if (this.wasLocked)
+			{
+					this.wasLocked = false;
+					this.lockedTo.playerLocked = false;
+					this.lockedTo = null;
+			}
+
+	},
+
+	update: function() {
+		//Collison for the player with platforms
+		this.physics.arcade.collide(this.player, this.platforms);
+		this.physics.arcade.collide(this.player, this.icePlatforms, this.customSep, null, this);
+
+		//Checks to see if player touches the spikes, if so calls killPlayer function
+	  this.physics.arcade.collide(this.player, this.spikes, this.killPlayer);
+
+		var standing = this.player.body.blocked.down ||  this.player.body.touching.down || this.locked;
+
+		//Reset player velocity
+		this. player.body.velocity.x = 0;
+
+		//give movement to player
+		if (this.cursors.left.isDown) {
+			//left
+			this.player.body.velocity.x = -150;
+			this.player.animations.play('left');
+		} else if (this.cursors.right.isDown) {
+				//right
+				this.player.body.velocity.x = 150;
+				this.player.animations.play('right');
+		} else {
+				//standing still
+				this.player.animations.stop();
+				this.player.frame = 4;
+		}
+
+		//jump/break lock
+		if (standing && this.cursors.up.isDown && this.time.time > this.jumpTimer) {
+			if (this.locked) {
+				this.cancelLock();
+			}
+
+			this.willJump = true;
+		}
+
+		if (this.locked) {
+			this.checkLock();
+		}
+
+	},
+
+	killPlayer: function(player) {
+		player.kill();
 	}
 
-	//jump
-	if (cursors.up.isDown && player.body.touching.down) {
-		player.body.velocity.y = -250;
-	}
+};
 
-}
+IcePlatform = function (game, x, y, key, group) {
 
-function killPlayer(player) {
-	player.kill();
-}
+		if (typeof group === 'undefined') { group = game.world; }
+
+		Phaser.Sprite.call(this, game, x, y, key);
+
+		game.physics.arcade.enable(this);
+
+		this.anchor.x = 0.5;
+
+		this.body.customSeparateX = true;
+		this.body.customSeparateY = true;
+		this.body.allowGravity = false;
+		this.body.immovable = true;
+
+		this.playerLocked = false;
+
+		group.add(this);
+
+};
+
+IcePlatform.prototype = Object.create(Phaser.Sprite.prototype);
+IcePlatform.prototype.constructor = IcePlatform;
+
+IcePlatform.prototype.addMotionPath = function (motionPath) {
+
+		this.tweenX = this.game.add.tween(this.body);
+		this.tweenY = this.game.add.tween(this.body);
+
+		for (var i = 0; i < motionPath.length; i++)
+		{
+				this.tweenX.to( { x: motionPath[i].x }, motionPath[i].xSpeed, motionPath[i].xEase);
+				this.tweenY.to( { y: motionPath[i].y }, motionPath[i].ySpeed, motionPath[i].yEase);
+		}
+
+		this.tweenX.loop();
+		this.tweenY.loop();
+
+};
+
+IcePlatform.prototype.start = function () {
+
+		this.tweenX.start();
+		this.tweenY.start();
+
+};
+
+IcePlatform.prototype.stop = function () {
+
+		this.tweenX.stop();
+		this.tweenY.stop();
+
+};
+
+game.state.add('Game', PhaserHaikuGame, true);
 
 </script>
 
